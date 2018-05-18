@@ -31,6 +31,14 @@ contract PayTogether {
         uint indexed _newCost
     );
 
+    event FundsReturnedDueToContractExpiration(
+        uint indexed amount
+    );
+
+    event ExecutionSuccessful(
+        uint indexed amount
+    );
+
     modifier onlyBy(address _account)
     {
         require(
@@ -93,7 +101,7 @@ contract PayTogether {
     // create an event that someone joined (and potentially that money is available for return)
     function join() public payable {
         require(
-            ended && now <= autoEndTime,
+            !ended && now <= autoEndTime,
             "The contract has already ended."
         );
 
@@ -142,6 +150,40 @@ contract PayTogether {
     // should check we have enough people locked in/enough money
     // should attempt to execute the contract
     // should trigger success/fail event
+    // ** OPTIONAL FUTURE IMPLEMENTATION ** Add alarm clock usage so this gets trigger at expiration time
+    function end() public onlyBy(admin) {
+        require(
+            !ended,
+            "The contract has already ended."
+        );
+
+        // Check if we can attempt to execute the function
+        // which should only be done if we have not passed expiration autoEndTime
+        // and that we have the correct number of users
+        bool success = false;
+        if(lockedInUsers.length >= minUsers &&
+            lockedInUsers.length <= maxUser &&
+            now <= autoEndTime
+          ) {
+            success = BasicContract(contractToPay).execute.value(this.balance)();
+        }
+
+        uint currentCost = currentCostPerPerson();
+        // If we were successful, let everyone know and end the contract
+        // If we were not, and we are passed the end time, we should end the contract by returning all of the funds
+        if(success) {
+            emit ExecutionSuccessful(currentCost);
+            ended = true;
+        } else if(now > autoEndTime) {
+            for(uint i = 0; i < lockedInUsers.length; i++) {
+                if(lockedInUsers[i] != msg.sender) {
+                    pendingReturns[lockedInUsers[i]] += currentCost;
+                }
+            }
+            emit FundsReturnedDueToContractExpiration(currentCost);
+            ended = true;
+        }
+    }
 
     // function: current cost per person
     // return flat cost pp if this is multi beneficiary
@@ -161,6 +203,11 @@ contract PayTogether {
     // return flat cost pp if this is multi beneficiary
     // else this will return total min((cost/minUsers), (cost / (numUsers)))
     function calculateCost(uint numUsers) private returns (uint costPerPerson) {
+        require(
+            !ended && now <= autoEndTime,
+            "The contract has already ended."
+        );
+
         if(multiBeneficiary) {
             return fixedCostPerPerson;
         }
