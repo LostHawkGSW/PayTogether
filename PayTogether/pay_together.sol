@@ -1,7 +1,5 @@
 pragma solidity ^0.4.21;
 
-import "math.sol"
-
 /** @title Pay for anything, together! */
 contract PayTogether {
 	// Used to track whether or not this contract has ended
@@ -119,7 +117,11 @@ contract PayTogether {
         }
         uint minPerPersonCost = totalCost / minUsers;
         uint currentPerPersonCost = totalCost / numUsers;
-        return Math.min(minPerPersonCost, currentPerPersonCost);
+        uint min = minPerPersonCost;
+        if(currentPerPersonCost < min) {
+            min = currentPerPersonCost;
+        }
+        return min;
     }
 
     // function: withdraw return funds
