@@ -25,6 +25,12 @@ contract PayTogether {
 
 	bool public multiBeneficiary;
 
+    event NewMemberJoined(
+        address indexed _newMember,
+        uint indexed _cost,
+        uint indexed _newCost
+    );
+
     modifier onlyBy(address _account)
     {
         require(
@@ -115,6 +121,16 @@ contract PayTogether {
         // Return any excess the user sent
         if(msg.value > newCost) {
             pendingReturns[msg.sender] += msg.value - newCost;
+        }
+
+        // Return any excess the other members sent
+        if(newCost < currentCost) {
+            amountToReturn = currentCost - newCost;
+            for(uint i = 0; i < lockedInUsers.length; i++) {
+                if(lockedInUsers[i] != msg.sender) {
+                    pendingReturns[lockedInUsers[i]] += amountToReturn;
+                }
+            }
         }
 
         // Let everyone know that a new person has joined and if the cost has changed (and thus funds can be returned)
