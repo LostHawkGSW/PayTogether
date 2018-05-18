@@ -4,8 +4,6 @@ pragma solidity ^0.4.21;
 contract PayTogether {
 	// Used to track whether or not this contract has ended
 	bool public ended;
-	// map addresses to funds
-	mapping(address => uint) public deposits;
 	// map addresses to funds to return
 	mapping(address => uint) public pendingReturns;
 	// list of users who are locked in
@@ -87,6 +85,41 @@ contract PayTogether {
 	// should check if this is multi beneficiary -- if it is we need to add to beneficiary list
 	// check if we need to return funds for any of the members
     // create an event that someone joined (and potentially that money is available for return)
+    function join() public payable {
+        require(
+            ended && now <= autoEndTime,
+            "The contract has already ended."
+        );
+
+        require(
+            lockedInUsers.length < maxUsers,
+            "The contract is already full."
+        );
+
+        newCost = nextCostPerPerson();
+        require(
+            msg.value >= newCost,
+            "The contract is already full."
+        );
+
+        currentCost = currentCostPerPerson();
+
+        // Lock in this user
+        lockedInUsers.push(msg.sender);
+
+        // Add to list of beneficiaries if this is a multibeneficiary contract
+        if(multiBeneficiary) {
+            beneficiaries.push(msg.sender);
+        }
+
+        // Return any excess the user sent
+        if(msg.value > newCost) {
+            pendingReturns[msg.sender] += msg.value - newCost;
+        }
+
+        // Let everyone know that a new person has joined and if the cost has changed (and thus funds can be returned)
+        emit NewMemberJoined(msg.sender, currentCost, newCost);
+    }
 
 	// function: end (early/ttl)
     // should check min/max users
