@@ -1,5 +1,7 @@
 pragma solidity ^0.4.21;
 
+import "math.sol"
+
 /** @title Pay for anything, together! */
 contract PayTogether {
 	// Used to track whether or not this contract has ended
@@ -7,23 +9,37 @@ contract PayTogether {
 	// map addresses to funds
 	mapping(address => uint) public deposits;
 	// map addresses to funds to return
-	mapping(address => uint) public return_funds;
+	mapping(address => uint) public pendingReturns;
 	// list of users who are locked in
-	address[] public locked_in_users;
+	address[] public lockedInUsers;
 	// contract will payout if enough funds are available at this time
 	// else it will add funds to return funds
-	uint public lockin_end_days;
-    uint public lockin_end_time;
+	uint public autoEndInDays;
+    uint public autoEndTime;
 	// This is the contract we are attempt to pay together with
-    address public contract_to_pay;
-    uint public total_cost;
-    uint public fixed_cost_per_person;
+    address public contractToPay;
+    uint public totalCost;
+    uint public fixedCostPerPerson;
+    uint public minUsers;
+    uint public maxUsers;
 
 	address public admin;
 	// In most cases this will be a single beneficiary
 	address[] public beneficiaries;
 
-	bool public multi_beneficiary;
+	bool public multiBeneficiary;
+
+    modifier onlyBy(address _account)
+    {
+        require(
+            msg.sender == _account,
+            "Sender not authorized."
+        );
+        // Do not forget the "_;"! It will
+        // be replaced by the actual function
+        // body when the modifier is used.
+        _;
+    }
 
 	/**
 	  * @dev constructor for contract
@@ -32,38 +48,36 @@ contract PayTogether {
 	  * @param _beneficiary this is the address to tell the external contract to pay out/give to on success
 	  * @param _multi_beneficiary signify if the external contract should pay out/give to one or all
 	  *        ex: hotel room goes to one person in charge -- flights go to each individual
-	  * @param _total_cost the total cost for the contract (including gas)
-	  * @param _fixed_cost_per_person if this is a multi beneficiary contract; it is typically a cost per person
+	  * @param _totalCost the total cost for the contract (including gas)
+	  * @param _fixedCostPerPerson if this is a multi beneficiary contract; it is typically a cost per person
 	  * @param _min_users the minimum locked in users for this contract to end successfully (this is a type of guarantee
 	           to those joining the contract that the cost will be at most based on the minimum users.
 	  * @param _max_users the maximum locked in users; once hit and all criteria are met contract should auto succeed
-	  * @param _lockin_end_days when this contract will expire/attempt to complete automatically
+	  * @param _autoEndInDays when this contract will expire/attempt to complete automatically
 	  */
 	constructor (
         address _contract,
 		address _admin,
 		address _beneficiary,
-		bool _multi_beneficiary,
-		uint _total_cost,
-		uint _fixed_cost_per_person,
-		uint _min_users,
-		uint _max_users,
-		uint _lockin_end_days
+		bool _multiBeneficiary,
+		uint _totalCost,
+		uint _fixedCostPerPerson,
+		uint _minUsers,
+		uint _maxUsers,
+		uint _autoEndInDays
 	) public {
-		contract_to_pay = _contract;
+        contractToPay = _contract;
 		admin = _admin;
-		multi_beneficiary = _multi_beneficiary;
-        if(multi_beneficiary) {
-            fixed_cost_per_person = _fixed_cost_per_person;
+        multiBeneficiary = _multiBeneficiary;
+        if(multiBeneficiary) {
+            fixedCostPerPerson = _fixedCostPerPerson;
         } else {
-            total_cost = _total_cost;
+            totalCost = _totalCost;
         }
 		beneficiaries = [_beneficiary];
-		// if _lockin_time
-		//    make sure funds were send that match for that many users
-		lockin_end_time = now + _lockin_end_days * 1 days;
-        min_users = _min_users;
-        max_users = _max_users;
+        autoEndTime = now + _autoEndInDays * 1 days;
+        minUsers = _minUsers;
+        maxUsers = _maxUsers;
 	}
 
 
@@ -76,17 +90,44 @@ contract PayTogether {
 	// check if we need to return funds for any of the members
     // create an event that someone joined (and potentially that money is available for return)
 
-	// function: current cost per person
-	// return flat cost pp if this is multi beneficiary
-	// else this will return total cost / (locked in users + 1)
-
 	// function: end (early/ttl)
     // should check min/max users
     // should check we have enough people locked in/enough money
     // should attempt to execute the contract
     // should trigger success/fail event
 
-	// function: withdraw return funds
+    // function: current cost per person
+    // return flat cost pp if this is multi beneficiary
+    // else this will return total min((cost/minUsers), (cost / (locked in users)))
+    function currentCostPerPerson() public returns (uint costPerPerson) {
+        return calculateCost(lockedInUsers.length);
+    }
+
+    // function: next cost per person
+    // return flat cost pp if this is multi beneficiary
+    // else this will return total min((cost/minUsers), (cost / (locked in users + 1)))
+    function nextCostPerPerson() public returns (uint costPerPerson) {
+        return calculateCost(lockedInUsers.length + 1);
+    }
+
+    // function: calculate cost
+    // return flat cost pp if this is multi beneficiary
+    // else this will return total min((cost/minUsers), (cost / (numUsers)))
+    function calculateCost(uint numUsers) private returns (uint costPerPerson) {
+        if(multiBeneficiary) {
+            return fixedCostPerPerson;
+        }
+        uint minPerPersonCost = totalCost / minUsers;
+        uint currentPerPersonCost = totalCost / numUsers;
+        return Math.min(minPerPersonCost, currentPerPersonCost);
+    }
+
+    // function: withdraw return funds
+    function withdraw() public {
+        uint amount = pendingReturns[msg.sender];
+        pendingReturns[msg.sender] = 0;
+        msg.sender.transfer(amount);
+    }
 
 
 
