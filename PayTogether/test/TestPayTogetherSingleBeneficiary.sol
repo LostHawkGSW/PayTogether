@@ -7,7 +7,7 @@ contract TestPayTogetherSingleBeneficiary {
     function beforeEach() {
 
     }
-    
+
     function testConstructor() {
 
     }
