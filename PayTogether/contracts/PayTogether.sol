@@ -1,5 +1,7 @@
 pragma solidity ^0.4.21;
 
+import "./BasicContract.sol";
+
 /** @title Pay for anything, together! */
 contract PayTogether {
 	// Used to track whether or not this contract has ended
@@ -56,13 +58,13 @@ contract PayTogether {
 	  * @param _contract the contract this contract will be paying for
 	  * @param _admin the address for the admin (this will be the creator for now)
 	  * @param _beneficiary this is the address to tell the external contract to pay out/give to on success
-	  * @param _multi_beneficiary signify if the external contract should pay out/give to one or all
+	  * @param _multiBeneficiary signify if the external contract should pay out/give to one or all
 	  *        ex: hotel room goes to one person in charge -- flights go to each individual
 	  * @param _totalCost the total cost for the contract (including gas)
 	  * @param _fixedCostPerPerson if this is a multi beneficiary contract; it is typically a cost per person
-	  * @param _min_users the minimum locked in users for this contract to end successfully (this is a type of guarantee
+	  * @param _minUsers the minimum locked in users for this contract to end successfully (this is a type of guarantee
 	           to those joining the contract that the cost will be at most based on the minimum users.
-	  * @param _max_users the maximum locked in users; once hit and all criteria are met contract should auto succeed
+	  * @param _maxUsers the maximum locked in users; once hit and all criteria are met contract should auto succeed
 	  * @param _autoEndInDays when this contract will expire/attempt to complete automatically
 	  */
 	constructor (
@@ -110,13 +112,13 @@ contract PayTogether {
             "The contract is already full."
         );
 
-        newCost = nextCostPerPerson();
+        uint newCost = nextCostPerPerson();
         require(
             msg.value >= newCost,
             "The contract is already full."
         );
 
-        currentCost = currentCostPerPerson();
+        uint currentCost = currentCostPerPerson();
 
         // Lock in this user
         lockedInUsers.push(msg.sender);
@@ -133,7 +135,7 @@ contract PayTogether {
 
         // Return any excess the other members sent
         if(newCost < currentCost) {
-            amountToReturn = currentCost - newCost;
+            uint amountToReturn = currentCost - newCost;
             for(uint i = 0; i < lockedInUsers.length; i++) {
                 if(lockedInUsers[i] != msg.sender) {
                     pendingReturns[lockedInUsers[i]] += amountToReturn;
@@ -162,10 +164,10 @@ contract PayTogether {
         // and that we have the correct number of users
         bool success = false;
         if(lockedInUsers.length >= minUsers &&
-            lockedInUsers.length <= maxUser &&
+            lockedInUsers.length <= maxUsers &&
             now <= autoEndTime
           ) {
-            success = BasicContract(contractToPay).execute.value(this.balance)();
+            success = BasicContract(contractToPay).execute.value(address(this).balance)();
         }
 
         uint currentCost = currentCostPerPerson();
@@ -188,21 +190,21 @@ contract PayTogether {
     // function: current cost per person
     // return flat cost pp if this is multi beneficiary
     // else this will return total min((cost/minUsers), (cost / (locked in users)))
-    function currentCostPerPerson() public returns (uint costPerPerson) {
+    function currentCostPerPerson() public view returns (uint costPerPerson) {
         return calculateCost(lockedInUsers.length);
     }
 
     // function: next cost per person
     // return flat cost pp if this is multi beneficiary
     // else this will return total min((cost/minUsers), (cost / (locked in users + 1)))
-    function nextCostPerPerson() public returns (uint costPerPerson) {
+    function nextCostPerPerson() public view returns (uint costPerPerson) {
         return calculateCost(lockedInUsers.length + 1);
     }
 
     // function: calculate cost
     // return flat cost pp if this is multi beneficiary
     // else this will return total min((cost/minUsers), (cost / (numUsers)))
-    function calculateCost(uint numUsers) private returns (uint costPerPerson) {
+    function calculateCost(uint numUsers) internal view returns (uint costPerPerson) {
         require(
             !ended && now <= autoEndTime,
             "The contract has already ended."
