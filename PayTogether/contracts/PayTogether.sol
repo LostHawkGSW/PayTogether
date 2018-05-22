@@ -22,7 +22,8 @@ contract PayTogether {
     uint public maxUsers;
 
     // the address for the admin (this will be the creator for now)
-	address public admin;
+	address[] public admins;
+    mapping(address => bool) public adminsMap;
 	// In most cases this will be a single beneficiary
     // this is the address to tell the external contract to pay out/give to on success
 	address[] public beneficiaries;
@@ -43,10 +44,10 @@ contract PayTogether {
         uint indexed amount
     );
 
-    modifier onlyBy(address _account)
+    modifier onlyBy(mapping(address => bool) _adminsMap)
     {
         require(
-            msg.sender == _account,
+            _adminsMap[msg.sender] == true,
             "Sender not authorized."
         );
         // Do not forget the "_;"! It will
@@ -75,7 +76,8 @@ contract PayTogether {
 		uint _autoEndInDays
 	) public {
         contractToPay = _contract;
-		admin = msg.sender;
+        admins.push(msg.sender);
+        adminsMap[msg.sender] = true;
         multiBeneficiary = _multiBeneficiary;
         totalCost = _totalCost;
 		beneficiaries = [msg.sender];
@@ -88,8 +90,8 @@ contract PayTogether {
         return pendingReturns[member];
     }
 
-    function getAdmin() public view returns(address _admin) {
-        return admin;
+    function getAdmins() public view returns(address[] _admins) {
+        return admins;
     }
 
 
@@ -153,7 +155,7 @@ contract PayTogether {
     // should attempt to execute the contract
     // should trigger success/fail event
     // ** OPTIONAL FUTURE IMPLEMENTATION ** Add alarm clock usage so this gets trigger at expiration time
-    function end() public onlyBy(admin) {
+    function end() public onlyBy(adminsMap) {
         require(
             !ended,
             "The contract has already ended."
@@ -170,8 +172,7 @@ contract PayTogether {
             if(multiBeneficiary) {
                 success = BasicContract(contractToPay).execute(lockedInUsers);
             } else {
-                address[1] memory adminAsArray = [admin];
-                success = BasicContract(contractToPay).execute(adminAsArray);
+                success = BasicContract(contractToPay).execute(admins);
             }
         }
 
