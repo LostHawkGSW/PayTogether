@@ -100,6 +100,9 @@ contract PayTogether {
         return admins;
     }
 
+    function isMember(address member) public view returns(bool _isMember) {
+        return lockedInUsersMap[member] == true;
+    }
 
 	// function: join
 	// should check that max users has not been hit
@@ -247,7 +250,7 @@ contract PayTogether {
 
     // function: withdraw return funds
     function withdraw() public {
-        doWithdrw(msg.sender);
+        doWithdraw(msg.sender);
     }
 
     function doWithdraw(address _sender) internal {

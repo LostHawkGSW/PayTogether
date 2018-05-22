@@ -14,7 +14,7 @@ contract TestPayTogether is BaseTest {
             .5 ether,
             "Theres should now be an excess .5 ether to return"
         );
-        payTogetherContract._withdraw(accounts[1]);
+        payTogetherContract._doWithdraw(accounts[1]);
         Assert.equal(
             address(accounts[1]).balance,
             .5 ether,
