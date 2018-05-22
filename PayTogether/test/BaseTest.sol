@@ -8,17 +8,22 @@ import "../contracts/BasicManyToManyContract.sol";
 
 contract BaseTest {
     PayTogether public payTogetherContract;
-    BasicManyToOneContract public basicContract;
+    BasicContract public basicContract;
     uint public totalCost = 1000;
     uint public minUsers = 2;
     uint public maxUsers = 4;
     uint public autoEndInDays = 7;
+    bool public manyToMany = false;
 
     function beforeEach() public {
-        basicContract = new BasicManyToOneContract(totalCost);
+        if(manyToMany) {
+            basicContract = new BasicManyToManyContract(totalCost);
+        } else {
+            basicContract = new BasicManyToOneContract(totalCost);
+        }
         payTogetherContract = new PayTogether(
             address(basicContract),
-            false,
+            manyToMany,
             totalCost,
             minUsers,
             maxUsers,
