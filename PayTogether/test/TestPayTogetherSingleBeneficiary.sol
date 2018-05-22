@@ -5,7 +5,7 @@ import "truffle/DeployedAddresses.sol";
 import "../contracts/PayTogether.sol";
 import "../contracts/BasicManyToOneContract.sol";
 
-contract TestPayTogetherSingleBeneficiary {
+contract TestPayTogetherSingleBeneficiary is BaseTest {
     function beforeEach() {
 
     }

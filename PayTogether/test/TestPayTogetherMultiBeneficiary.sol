@@ -5,7 +5,10 @@ import "truffle/DeployedAddresses.sol";
 import "../contracts/PayTogether.sol";
 import "../contracts/BasicManyToManyContract.sol";
 
-contract TestPayTogetherMultiBeneficiary {
+contract TestPayTogetherMultiBeneficiary is BaseTest {
+    // TODO -- uncomment this when ready
+    // bool public manyToMany = true;
+
     function beforeEach() {
         // TODO -- later
     }
