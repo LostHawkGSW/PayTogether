@@ -76,6 +76,11 @@ contract PayTogether {
 		uint _maxUsers,
 		uint _autoEndInDays
 	) public {
+        // TODO -- remove this once we are comfortable with multi beneficiary testing
+        require(
+            !_multiBeneficiary,
+            "Multi beneficiary payments are currently disabled."
+        );
         contractToPay = _contract;
         admins.push(msg.sender);
         adminsMap[msg.sender] = true;
