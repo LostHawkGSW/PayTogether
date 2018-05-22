@@ -10,6 +10,7 @@ contract PayTogether {
 	mapping(address => uint) public pendingReturns;
 	// list of users who are locked in
 	address[] public lockedInUsers;
+    mapping(address => bool) public lockedInUsersMap;
 	// contract will payout if enough funds are available at this time
 	// else it will add funds to return funds
 	uint public autoEndInDays;
@@ -104,6 +105,11 @@ contract PayTogether {
 	// check if we need to return funds for any of the members
     // create an event that someone joined (and potentially that money is available for return)
     function join() public payable {
+        doJoin(msg.sender, msg.value);
+    }
+
+    // implementation of join -- need to do it this way in order to test.
+    function doJoin(address _sender, uint _amount) internal {
         require(
             !ended && now <= autoEndTime,
             "The contract has already ended."
@@ -114,39 +120,45 @@ contract PayTogether {
             "The contract is already full."
         );
 
+        require(
+            lockedInUsersMap[_sender] == false,
+            "You are already locked into this contract."
+        );
+
         uint newCost = nextCostPerPerson();
         require(
-            msg.value >= newCost,
+            _amount >= newCost,
             "The contract is already full."
         );
 
         uint currentCost = currentCostPerPerson();
 
         // Lock in this user
-        lockedInUsers.push(msg.sender);
+        lockedInUsers.push(_sender);
+        lockedInUsersMap[_sender] = true;
 
         // Add to list of beneficiaries if this is a multibeneficiary contract
         if(multiBeneficiary) {
-            beneficiaries.push(msg.sender);
+            beneficiaries.push(_sender);
         }
 
         // Return any excess the user sent
         if(msg.value > newCost) {
-            pendingReturns[msg.sender] += msg.value - newCost;
+            pendingReturns[_sender] += _amount - newCost;
         }
 
         // Return any excess the other members sent
         if(newCost < currentCost) {
             uint amountToReturn = currentCost - newCost;
             for(uint i = 0; i < lockedInUsers.length; i++) {
-                if(lockedInUsers[i] != msg.sender) {
+                if(lockedInUsers[i] != _sender) {
                     pendingReturns[lockedInUsers[i]] += amountToReturn;
                 }
             }
         }
 
         // Let everyone know that a new person has joined and if the cost has changed (and thus funds can be returned)
-        emit NewMemberJoined(msg.sender, currentCost, newCost);
+        //emit NewMemberJoined(_sender, currentCost, newCost);
     }
 
 	// function: end (early/ttl)
@@ -230,8 +242,12 @@ contract PayTogether {
 
     // function: withdraw return funds
     function withdraw() public {
-        uint amount = pendingReturns[msg.sender];
-        pendingReturns[msg.sender] = 0;
+        doWithdrw(msg.sender);
+    }
+
+    function doWithdraw(address _sender) internal {
+        uint amount = pendingReturns[_sender];
+        pendingReturns[_sender] = 0;
         msg.sender.transfer(amount);
     }
 
