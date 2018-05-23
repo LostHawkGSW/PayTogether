@@ -84,6 +84,8 @@ contract PayTogether {
         contractToPay = _contract;
         admins.push(msg.sender);
         adminsMap[msg.sender] = true;
+        lockedInUsers.push(msg.sender);
+        lockedInUsersMap[msg.sender] = true;
         multiBeneficiary = _multiBeneficiary;
         totalCost = _totalCost;
 		beneficiaries = [msg.sender];

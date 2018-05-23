@@ -7,7 +7,7 @@ module.exports = function(deployer) {
     const maxUsers = 4;
     const autoEndInDays = 7;
     const manyToMany = false;
-    deployer.deploy(BasicManyToOneContract, totalCost).then(function() {
+    deployer.deploy(BasicManyToOneContract, totalCost).then(function(instance) {
         deployer.deploy(PayTogether, BasicManyToOneContract.address, manyToMany, totalCost, minUsers, maxUsers, autoEndInDays);
     });
 };
