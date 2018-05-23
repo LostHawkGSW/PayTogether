@@ -88,7 +88,7 @@ contract PayTogether {
         lockedInUsersMap[msg.sender] = true;
         multiBeneficiary = _multiBeneficiary;
         totalCost = _totalCost;
-		beneficiaries = [msg.sender];
+		beneficiaries.push(msg.sender);
         autoEndTime = now + _autoEndInDays * 1 days;
         minUsers = _minUsers;
         maxUsers = _maxUsers;
